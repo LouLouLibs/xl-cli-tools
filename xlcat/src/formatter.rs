@@ -149,9 +149,112 @@ pub fn format_empty_sheet(sheet: &SheetInfo) -> String {
     }
 }
 
-/// Stub for describe mode (implemented in Task 7).
-pub fn format_describe(_df: &DataFrame) -> String {
-    "(describe not yet implemented)\n".to_string()
+/// Render summary statistics for each column as a markdown table.
+///
+/// Stats are rows, columns are DataFrame columns:
+/// | stat | col1 | col2 | ... |
+/// |------|------|------|-----|
+/// | count | ... | ... | ... |
+/// ...
+pub fn format_describe(df: &DataFrame) -> String {
+    let columns = df.get_columns();
+    let stats = ["count", "null_count", "mean", "std", "min", "max", "median", "unique"];
+
+    // Header row
+    let mut out = String::from("| stat |");
+    for col in columns {
+        out.push_str(&format!(" {} |", col.name()));
+    }
+    out.push('\n');
+
+    // Separator
+    out.push_str("|------|");
+    for _ in columns {
+        out.push_str("---|");
+    }
+    out.push('\n');
+
+    // Stat rows
+    for stat in &stats {
+        out.push_str(&format!("| {stat} |"));
+        for col in columns {
+            let val = compute_stat(col, stat);
+            out.push_str(&format!(" {val} |"));
+        }
+        out.push('\n');
+    }
+
+    out
+}
+
+fn compute_stat(col: &Column, stat: &str) -> String {
+    let series = col.as_materialized_series();
+    match stat {
+        "count" => series.len().to_string(),
+        "null_count" => series.null_count().to_string(),
+        "mean" => {
+            if is_numeric(series.dtype()) {
+                series.mean().map(|v| format!("{v:.4}")).unwrap_or_else(|| "-".into())
+            } else {
+                "-".into()
+            }
+        }
+        "std" => {
+            if is_numeric(series.dtype()) {
+                series.std(1).map(|v| format!("{v:.4}")).unwrap_or_else(|| "-".into())
+            } else {
+                "-".into()
+            }
+        }
+        "min" => {
+            if is_numeric(series.dtype()) {
+                match series.min_reduce() {
+                    Ok(v) => v.value().to_string(),
+                    Err(_) => "-".into(),
+                }
+            } else {
+                "-".into()
+            }
+        }
+        "max" => {
+            if is_numeric(series.dtype()) {
+                match series.max_reduce() {
+                    Ok(v) => v.value().to_string(),
+                    Err(_) => "-".into(),
+                }
+            } else {
+                "-".into()
+            }
+        }
+        "median" => {
+            if is_numeric(series.dtype()) {
+                series.median().map(|v| format!("{v:.4}")).unwrap_or_else(|| "-".into())
+            } else {
+                "-".into()
+            }
+        }
+        "unique" => match series.n_unique() {
+            Ok(n) => n.to_string(),
+            Err(_) => "-".into(),
+        },
+        _ => "-".into(),
+    }
+}
+
+fn is_numeric(dtype: &DataType) -> bool {
+    matches!(
+        dtype,
+        DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Float32
+            | DataType::Float64
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -356,10 +459,30 @@ mod tests {
     }
 
     #[test]
-    fn test_format_describe_stub() {
-        let s = Series::new("x".into(), &[1i64]);
-        let df = DataFrame::new(vec![s.into_column()]).unwrap();
+    fn test_format_describe() {
+        let s_name = Series::new("name".into(), &["Alice", "Bob", "Carol"]);
+        let s_val = Series::new("value".into(), &[10i64, 20, 30]);
+        let df = DataFrame::new(vec![s_name.into_column(), s_val.into_column()]).unwrap();
         let out = format_describe(&df);
-        assert!(out.contains("not yet implemented"));
+        // Header row contains stat and column names
+        assert!(out.contains("| stat |"));
+        assert!(out.contains("| name |"));
+        assert!(out.contains("| value |"));
+        // All stat rows are present
+        assert!(out.contains("| count |"));
+        assert!(out.contains("| null_count |"));
+        assert!(out.contains("| mean |"));
+        assert!(out.contains("| std |"));
+        assert!(out.contains("| min |"));
+        assert!(out.contains("| max |"));
+        assert!(out.contains("| median |"));
+        assert!(out.contains("| unique |"));
+        // Non-numeric column shows "-" for mean
+        assert!(out.contains("| mean | - |"));
+        // Numeric column has a numeric mean value (not "-")
+        // count=3 for both
+        assert!(out.contains("| count | 3 | 3 |"));
+        // unique=3 for both
+        assert!(out.contains("| unique | 3 | 3 |"));
     }
 }

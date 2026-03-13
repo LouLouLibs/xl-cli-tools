@@ -171,6 +171,21 @@ fn test_empty_sheet() {
 }
 
 #[test]
+fn test_describe_mode() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join("simple.xlsx");
+    common::create_simple(&path);
+
+    xlcat()
+        .arg(path.to_str().unwrap())
+        .arg("--describe")
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("count"))
+        .stdout(predicate::str::contains("mean"));
+}
+
+#[test]
 fn test_all_without_sheet_on_multi() {
     let dir = TempDir::new().unwrap();
     let path = dir.path().join("multi.xlsx");

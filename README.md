@@ -1,4 +1,4 @@
-# llm-excel
+# xl-cli-tools
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
@@ -21,17 +21,17 @@ Two binaries, no runtime dependencies:
 
 ### Pre-built binaries (macOS)
 
-Download from [Releases](https://github.com/LouLouLibs/llm-excel/releases):
+Download from [Releases](https://github.com/LouLouLibs/xl-cli-tools/releases):
 
 ```bash
 # Apple Silicon
-curl -L https://github.com/LouLouLibs/llm-excel/releases/latest/download/xlcat-aarch64-apple-darwin -o ~/.local/bin/xlcat
-curl -L https://github.com/LouLouLibs/llm-excel/releases/latest/download/xlset-aarch64-apple-darwin -o ~/.local/bin/xlset
+curl -L https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/xlcat-aarch64-apple-darwin -o ~/.local/bin/xlcat
+curl -L https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/xlset-aarch64-apple-darwin -o ~/.local/bin/xlset
 chmod +x ~/.local/bin/xlcat ~/.local/bin/xlset
 
 # Intel Mac
-curl -L https://github.com/LouLouLibs/llm-excel/releases/latest/download/xlcat-x86_64-apple-darwin -o ~/.local/bin/xlcat
-curl -L https://github.com/LouLouLibs/llm-excel/releases/latest/download/xlset-x86_64-apple-darwin -o ~/.local/bin/xlset
+curl -L https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/xlcat-x86_64-apple-darwin -o ~/.local/bin/xlcat
+curl -L https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/xlset-x86_64-apple-darwin -o ~/.local/bin/xlset
 chmod +x ~/.local/bin/xlcat ~/.local/bin/xlset
 ```
 

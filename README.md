@@ -1,23 +1,32 @@
-# xl-cli-tools
+<div align="center">
 
+<h1>xl-cli-tools</h1>
+<h3>View and edit Excel files from the command line</h3>
+
+[![Vibecoded](https://img.shields.io/badge/vibecoded-%E2%9C%A8-blueviolet)](https://claude.ai)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
-Command-line tools for viewing and editing Excel files, designed for use with LLMs and Claude Code.
+<table>
+<tr>
+<td align="center"><strong>xlcat</strong> — view</td>
+<td align="center"><strong>xlset</strong> — edit</td>
+</tr>
+<tr>
+<td><img src="demo/xlcat.gif" width="480" alt="xlcat demo" /></td>
+<td><img src="demo/xlset.gif" width="480" alt="xlset demo" /></td>
+</tr>
+</table>
+
+</div>
+
+***
 
 Two binaries, no runtime dependencies:
 
 - **`xlcat`** — view xlsx/xls files as markdown tables or CSV
 - **`xlset`** — modify cells in existing xlsx files, preserving formatting
 
-## xlcat demo
-
-![xlcat demo](demo/xlcat.gif)
-
-## xlset demo
-
-![xlset demo](demo/xlset.gif)
-
-## Install
+## Installation
 
 ### Pre-built binaries (macOS)
 
@@ -168,8 +177,6 @@ Both tools include Claude Code skills (`/xls` and `/xlset`) for seamless use in 
 | 1 | Runtime error | Runtime error |
 | 2 | Invalid arguments | Invalid arguments |
 
-## Tech
+## License
 
-- **xlcat:** calamine (Excel reading) + polars (DataFrames, statistics) + clap
-- **xlset:** umya-spreadsheet (round-trip Excel editing) + clap
-- Both compile to single static binaries with no runtime dependencies
+MIT

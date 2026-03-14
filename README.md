@@ -8,12 +8,12 @@
 
 <table>
 <tr>
-<td align="center"><strong>xlcat</strong> — view</td>
-<td align="center"><strong>xlset</strong> — edit</td>
+<td align="center" width="50%"><strong>xlcat</strong> — view</td>
+<td align="center" width="50%"><strong>xlset</strong> — edit</td>
 </tr>
 <tr>
-<td><img src="demo/xlcat.gif" width="480" alt="xlcat demo" /></td>
-<td><img src="demo/xlset.gif" width="480" alt="xlset demo" /></td>
+<td><img src="demo/xlcat.gif" alt="xlcat demo" /></td>
+<td><img src="demo/xlset.gif" alt="xlset demo" /></td>
 </tr>
 </table>
 

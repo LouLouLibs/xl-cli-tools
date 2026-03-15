@@ -167,7 +167,14 @@ xlset modifies only the cells you specify. Everything else is untouched: formatt
 
 ## Claude Code integration
 
-Both tools include Claude Code skills (`/xls` and `/xlset`) for seamless use in conversations. Claude can view spreadsheets, analyze data, and make targeted edits.
+Both tools include Claude Code skills (`/xlcat` and `/xlset`) in the `skills/` directory. To install, symlink them into `~/.claude/skills/`:
+
+```bash
+ln -s "$(pwd)/skills/xlcat" ~/.claude/skills/xlcat
+ln -s "$(pwd)/skills/xlset" ~/.claude/skills/xlset
+```
+
+Claude can then view spreadsheets, analyze data, and make targeted edits in conversations.
 
 ## Exit codes
 

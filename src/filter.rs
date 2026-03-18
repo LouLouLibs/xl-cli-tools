@@ -242,6 +242,90 @@ pub fn apply_filters(df: &DataFrame, exprs: &[FilterExpr]) -> Result<DataFrame> 
     Ok(result)
 }
 
+/// Options for the filter pipeline.
+pub struct FilterOptions {
+    pub filters: Vec<FilterExpr>,
+    pub cols: Option<Vec<String>>,
+    pub sort: Option<SortSpec>,
+    pub limit: Option<usize>,
+    pub head: Option<usize>,
+    pub tail: Option<usize>,
+}
+
+/// Apply a sort specification to a DataFrame.
+pub fn apply_sort(df: &DataFrame, spec: &SortSpec) -> Result<DataFrame> {
+    let opts = SortMultipleOptions::default()
+        .with_order_descending(spec.descending);
+    Ok(df.sort([&spec.column], opts)?)
+}
+
+/// Run the full filter pipeline: head/tail → resolve & filter → sort → limit → select columns.
+pub fn filter_pipeline(df: DataFrame, opts: &FilterOptions) -> Result<DataFrame> {
+    let df_columns: Vec<String> = df
+        .get_column_names()
+        .iter()
+        .map(|s| s.to_string())
+        .collect();
+
+    // 1. Pre-filter window: head or tail
+    let df = if let Some(n) = opts.head {
+        df.head(Some(n))
+    } else if let Some(n) = opts.tail {
+        df.tail(Some(n))
+    } else {
+        df
+    };
+
+    // 2. Resolve column names in filter expressions and apply filters
+    let resolved_filters: Vec<FilterExpr> = opts
+        .filters
+        .iter()
+        .map(|f| {
+            let resolved_col = resolve_column(&f.column, &df_columns)?;
+            Ok(FilterExpr {
+                column: resolved_col,
+                op: f.op.clone(),
+                value: f.value.clone(),
+            })
+        })
+        .collect::<Result<Vec<_>, String>>()
+        .map_err(|e| anyhow::anyhow!("{}", e))?;
+
+    let df = apply_filters(&df, &resolved_filters)?;
+
+    // 3. Sort
+    let df = if let Some(ref spec) = opts.sort {
+        let resolved_col = resolve_column(&spec.column, &df_columns)
+            .map_err(|e| anyhow::anyhow!("{}", e))?;
+        let resolved_spec = SortSpec {
+            column: resolved_col,
+            descending: spec.descending,
+        };
+        apply_sort(&df, &resolved_spec)?
+    } else {
+        df
+    };
+
+    // 4. Limit (after filtering and sorting)
+    let df = if let Some(n) = opts.limit {
+        df.head(Some(n))
+    } else {
+        df
+    };
+
+    // 5. Select columns
+    let df = if let Some(ref col_specs) = opts.cols {
+        let resolved_cols = resolve_columns(col_specs, &df_columns)
+            .map_err(|e| anyhow::anyhow!("{}", e))?;
+        let col_refs: Vec<&str> = resolved_cols.iter().map(|s| s.as_str()).collect();
+        df.select(col_refs)?
+    } else {
+        df
+    };
+
+    Ok(df)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -526,5 +610,127 @@ mod tests {
         let cols = vec!["State".to_string(), "Amount".to_string(), "Year".to_string()];
         let resolved = resolve_columns(&["A".to_string(), "Year".to_string()], &cols).unwrap();
         assert_eq!(resolved, vec!["State", "Year"]);
+    }
+
+    #[test]
+    fn sort_ascending() {
+        let df = make_test_df();
+        let spec = parse_sort_spec("Amount:asc").unwrap();
+        let result = apply_sort(&df, &spec).unwrap();
+        let col = result.column("Amount").unwrap().as_materialized_series();
+        let amounts = col.i64().unwrap();
+        assert_eq!(amounts.get(0), Some(500));
+        assert_eq!(amounts.get(4), Some(2000));
+    }
+
+    #[test]
+    fn sort_descending() {
+        let df = make_test_df();
+        let spec = parse_sort_spec("Amount:desc").unwrap();
+        let result = apply_sort(&df, &spec).unwrap();
+        let col = result.column("Amount").unwrap().as_materialized_series();
+        let amounts = col.i64().unwrap();
+        assert_eq!(amounts.get(0), Some(2000));
+        assert_eq!(amounts.get(4), Some(500));
+    }
+
+    #[test]
+    fn pipeline_full() {
+        let df = make_test_df();
+        let opts = FilterOptions {
+            filters: vec![parse_filter_expr("Amount>500").unwrap()],
+            cols: Some(vec!["State".to_string(), "Amount".to_string()]),
+            sort: Some(parse_sort_spec("Amount:desc").unwrap()),
+            limit: Some(2),
+            head: None,
+            tail: None,
+        };
+        let result = filter_pipeline(df, &opts).unwrap();
+        assert_eq!(result.height(), 2);
+        assert_eq!(result.width(), 2);
+        let col = result.column("Amount").unwrap().as_materialized_series();
+        let amounts = col.i64().unwrap();
+        assert_eq!(amounts.get(0), Some(2000));
+        assert_eq!(amounts.get(1), Some(1500));
+    }
+
+    #[test]
+    fn pipeline_head_before_filter() {
+        let df = make_test_df(); // 5 rows: CA/LA, NY/NYC, CA/SF, TX/Houston, NY/Albany
+        let opts = FilterOptions {
+            filters: vec![parse_filter_expr("State=NY").unwrap()],
+            cols: None,
+            sort: None,
+            limit: None,
+            head: Some(3), // Take first 3 rows before filtering
+            tail: None,
+        };
+        let result = filter_pipeline(df, &opts).unwrap();
+        // First 3 rows: CA/LA, NY/NYC, CA/SF → only NY/NYC matches
+        assert_eq!(result.height(), 1);
+    }
+
+    #[test]
+    fn pipeline_tail_before_filter() {
+        let df = make_test_df(); // 5 rows
+        let opts = FilterOptions {
+            filters: vec![parse_filter_expr("State=CA").unwrap()],
+            cols: None,
+            sort: None,
+            limit: None,
+            head: None,
+            tail: Some(3), // Last 3 rows before filtering
+        };
+        let result = filter_pipeline(df, &opts).unwrap();
+        // Last 3 rows: CA/SF, TX/Houston, NY/Albany → only CA/SF matches
+        assert_eq!(result.height(), 1);
+    }
+
+    #[test]
+    fn pipeline_no_options_returns_all() {
+        let df = make_test_df();
+        let opts = FilterOptions {
+            filters: vec![],
+            cols: None,
+            sort: None,
+            limit: None,
+            head: None,
+            tail: None,
+        };
+        let result = filter_pipeline(df, &opts).unwrap();
+        assert_eq!(result.height(), 5);
+        assert_eq!(result.width(), 5);
+    }
+
+    #[test]
+    fn pipeline_cols_by_letter() {
+        let df = make_test_df();
+        let opts = FilterOptions {
+            filters: vec![],
+            cols: Some(vec!["A".to_string(), "C".to_string()]),
+            sort: None,
+            limit: None,
+            head: None,
+            tail: None,
+        };
+        let result = filter_pipeline(df, &opts).unwrap();
+        assert_eq!(result.width(), 2);
+        let names: Vec<String> = result.get_column_names().iter().map(|s| s.to_string()).collect();
+        assert_eq!(names, vec!["State", "Amount"]);
+    }
+
+    #[test]
+    fn pipeline_limit_after_filter() {
+        let df = make_test_df();
+        let opts = FilterOptions {
+            filters: vec![parse_filter_expr("Status=Active").unwrap()],
+            cols: None,
+            sort: None,
+            limit: Some(2),
+            head: None,
+            tail: None,
+        };
+        let result = filter_pipeline(df, &opts).unwrap();
+        assert_eq!(result.height(), 2); // 3 Active rows, limited to 2
     }
 }

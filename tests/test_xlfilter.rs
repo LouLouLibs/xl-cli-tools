@@ -346,3 +346,39 @@ fn gt_with_non_numeric_value() {
         .failure()
         .stderr(predicate::str::contains("numeric value"));
 }
+
+// === Skip rows ===
+
+#[test]
+fn skip_metadata_rows() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join("meta.xlsx");
+    common::create_with_metadata(&path);
+
+    xlfilter()
+        .arg(&path)
+        .args(["--skip", "2"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Name"))
+        .stdout(predicate::str::contains("Alice"))
+        .stdout(predicate::str::contains("Bob"))
+        .stdout(predicate::str::contains("Quarterly Report").not())
+        .stderr(predicate::str::contains("2 rows"));
+}
+
+#[test]
+fn skip_with_filter() {
+    let dir = TempDir::new().unwrap();
+    let path = dir.path().join("meta.xlsx");
+    common::create_with_metadata(&path);
+
+    xlfilter()
+        .arg(&path)
+        .args(["--skip", "2", "--where", "Name=Alice"])
+        .assert()
+        .success()
+        .stdout(predicate::str::contains("Alice"))
+        .stdout(predicate::str::contains("Bob").not())
+        .stderr(predicate::str::contains("1 rows"));
+}

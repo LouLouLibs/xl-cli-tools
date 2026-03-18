@@ -95,7 +95,11 @@ fn run(args: Args) -> Result<()> {
     let sheet_name = resolve_sheet(&info, args.sheet.as_deref())?;
 
     // Read sheet into DataFrame
-    let df = reader::read_sheet(&args.file, &sheet_name)?;
+    let df = if let Some(skip) = args.skip {
+        reader::read_sheet_with_skip(&args.file, &sheet_name, skip)?
+    } else {
+        reader::read_sheet(&args.file, &sheet_name)?
+    };
 
     if df.height() == 0 {
         eprintln!("0 rows");

@@ -108,6 +108,29 @@ pub fn create_empty_sheet(path: &Path) {
     wb.save(path).unwrap();
 }
 
+/// Create a test file with metadata rows above the real header.
+pub fn create_with_metadata(path: &Path) {
+    use rust_xlsxwriter::*;
+    let mut workbook = Workbook::new();
+    let sheet = workbook.add_worksheet().set_name("Data").unwrap();
+
+    // Metadata rows
+    sheet.write_string(0, 0, "Quarterly Report").unwrap();
+    sheet.write_string(1, 0, "Generated 2024-01-01").unwrap();
+
+    // Real header at row 2
+    sheet.write_string(2, 0, "Name").unwrap();
+    sheet.write_string(2, 1, "Value").unwrap();
+
+    // Data
+    sheet.write_string(3, 0, "Alice").unwrap();
+    sheet.write_number(3, 1, 100.0).unwrap();
+    sheet.write_string(4, 0, "Bob").unwrap();
+    sheet.write_number(4, 1, 200.0).unwrap();
+
+    workbook.save(path.to_str().unwrap()).unwrap();
+}
+
 /// Create a test file with diverse data for filter testing.
 /// Sheet "Data" with 6 rows: State, City, Amount, Year, Status
 pub fn create_filterable(path: &Path) {

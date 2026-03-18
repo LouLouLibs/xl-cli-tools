@@ -23,14 +23,33 @@ pub fn read_sheet(path: &Path, sheet_name: &str) -> Result<DataFrame> {
 }
 
 pub fn range_to_dataframe(range: &calamine::Range<Data>) -> Result<DataFrame> {
-    let (total_rows, cols) = range.get_size();
-    if total_rows == 0 || cols == 0 {
+    range_to_dataframe_skip(range, 0)
+}
+
+/// Read a sheet, skipping the first `skip` rows before treating the next row as the header.
+pub fn read_sheet_with_skip(path: &Path, sheet_name: &str, skip: usize) -> Result<DataFrame> {
+    let mut workbook = open_workbook_auto(path)
+        .with_context(|| format!("Cannot open workbook: {}", path.display()))?;
+    let range = workbook
+        .worksheet_range(sheet_name)
+        .with_context(|| format!("Cannot read sheet: {sheet_name}"))?;
+    range_to_dataframe_skip(&range, skip)
+}
+
+/// Convert a calamine Range to a DataFrame, skipping `skip` rows before the header.
+pub fn range_to_dataframe_skip(range: &calamine::Range<Data>, skip: usize) -> Result<DataFrame> {
+    let rows: Vec<&[Data]> = range.rows().skip(skip).collect();
+    let cols = if rows.is_empty() {
+        0
+    } else {
+        rows.iter().map(|r| r.len()).max().unwrap_or(0)
+    };
+
+    if rows.is_empty() || cols == 0 {
         return Ok(DataFrame::default());
     }
 
-    let rows: Vec<&[Data]> = range.rows().collect();
-
-    // First row = headers
+    // First row (after skip) = headers
     let headers: Vec<String> = rows[0]
         .iter()
         .enumerate()
@@ -40,7 +59,7 @@ pub fn range_to_dataframe(range: &calamine::Range<Data>) -> Result<DataFrame> {
         })
         .collect();
 
-    if total_rows == 1 {
+    if rows.len() == 1 {
         // Header only, no data
         let series: Vec<Column> = headers
             .iter()
@@ -373,5 +392,39 @@ mod tests {
         let df = read_sheet(tmp.path(), "Blank").unwrap();
         assert_eq!(df.height(), 0);
         assert_eq!(df.width(), 0);
+    }
+
+    /// Create xlsx with metadata rows above the real header
+    fn create_with_metadata_rows(path: &std::path::Path) {
+        let mut wb = Workbook::new();
+        let ws = wb.add_worksheet().set_name("Data").unwrap();
+        ws.write_string(0, 0, "Report Title").unwrap();
+        ws.write_string(1, 0, "Generated 2024-01-01").unwrap();
+        ws.write_string(2, 0, "Name").unwrap();
+        ws.write_string(2, 1, "Value").unwrap();
+        ws.write_string(3, 0, "Alice").unwrap();
+        ws.write_number(3, 1, 100.0).unwrap();
+        ws.write_string(4, 0, "Bob").unwrap();
+        ws.write_number(4, 1, 200.0).unwrap();
+        wb.save(path).unwrap();
+    }
+
+    #[test]
+    fn test_read_with_skip() {
+        let tmp = NamedTempFile::with_suffix(".xlsx").unwrap();
+        create_with_metadata_rows(tmp.path());
+        let df = read_sheet_with_skip(tmp.path(), "Data", 2).unwrap();
+        let col_names: Vec<String> = df.get_column_names().iter().map(|s| s.to_string()).collect();
+        assert_eq!(col_names, vec!["Name", "Value"]);
+        assert_eq!(df.height(), 2);
+    }
+
+    #[test]
+    fn test_read_with_skip_zero() {
+        let tmp = NamedTempFile::with_suffix(".xlsx").unwrap();
+        create_simple(tmp.path());
+        let df = read_sheet_with_skip(tmp.path(), "Data", 0).unwrap();
+        assert_eq!(df.height(), 5);
+        assert_eq!(df.width(), 4);
     }
 }

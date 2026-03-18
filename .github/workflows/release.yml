@@ -34,6 +34,7 @@ jobs:
           mkdir -p dist
           cp target/${{ matrix.target }}/release/xlcat dist/xlcat-${{ matrix.suffix }}
           cp target/${{ matrix.target }}/release/xlset dist/xlset-${{ matrix.suffix }}
+          cp target/${{ matrix.target }}/release/xlfilter dist/xlfilter-${{ matrix.suffix }}
 
       - uses: actions/upload-artifact@v4
         with:
@@ -57,17 +58,20 @@ jobs:
           # ARM Mac
           cp artifacts/binaries-aarch64-apple-darwin/xlcat-aarch64-apple-darwin release/
           cp artifacts/binaries-aarch64-apple-darwin/xlset-aarch64-apple-darwin release/
+          cp artifacts/binaries-aarch64-apple-darwin/xlfilter-aarch64-apple-darwin release/
 
           # x86 Mac
           cp artifacts/binaries-x86_64-apple-darwin/xlcat-x86_64-apple-darwin release/
           cp artifacts/binaries-x86_64-apple-darwin/xlset-x86_64-apple-darwin release/
+          cp artifacts/binaries-x86_64-apple-darwin/xlfilter-x86_64-apple-darwin release/
 
           # Demo GIFs
           cp demo/xlcat.gif release/
           cp demo/xlset.gif release/
+          cp demo/xlfilter.gif release/
 
           # Make binaries executable
-          chmod +x release/xlcat-* release/xlset-*
+          chmod +x release/xlcat-* release/xlset-* release/xlfilter-*
 
       - name: Create GitHub Release
         env:

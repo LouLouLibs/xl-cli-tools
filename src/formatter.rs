@@ -237,7 +237,7 @@ fn df_to_strings(df: &DataFrame) -> (Vec<String>, Vec<Vec<String>>) {
 }
 
 /// Compute the display width for each column.
-fn compute_col_widths(headers: &[String], rows: &[Vec<String>]) -> Vec<usize> {
+pub fn compute_col_widths(headers: &[String], rows: &[Vec<String>]) -> Vec<usize> {
     let mut widths: Vec<usize> = headers.iter().map(|h| h.len().max(3)).collect();
     for row in rows {
         for (i, cell) in row.iter().enumerate() {
@@ -250,7 +250,7 @@ fn compute_col_widths(headers: &[String], rows: &[Vec<String>]) -> Vec<usize> {
 }
 
 /// Render a markdown table header + separator line.
-fn render_table_header(headers: &[String], widths: &[usize]) -> String {
+pub fn render_table_header(headers: &[String], widths: &[usize]) -> String {
     let mut out = String::new();
     out.push('|');
     for (i, h) in headers.iter().enumerate() {
@@ -270,7 +270,7 @@ fn render_table_header(headers: &[String], widths: &[usize]) -> String {
 }
 
 /// Render markdown table data rows (no header).
-fn render_table_rows(rows: &[Vec<String>], widths: &[usize]) -> String {
+pub fn render_table_rows(rows: &[Vec<String>], widths: &[usize]) -> String {
     let mut out = String::new();
     for row in rows {
         out.push('|');
@@ -284,7 +284,7 @@ fn render_table_rows(rows: &[Vec<String>], widths: &[usize]) -> String {
 }
 
 /// Render a complete aligned markdown table.
-fn render_table(headers: &[String], rows: &[Vec<String>]) -> String {
+pub fn render_table(headers: &[String], rows: &[Vec<String>]) -> String {
     let widths = compute_col_widths(headers, rows);
     let mut out = render_table_header(headers, &widths);
     out.push_str(&render_table_rows(rows, &widths));
@@ -300,7 +300,7 @@ fn format_cell(col: &Column, idx: usize) -> String {
 }
 
 /// Convert an AnyValue to its display string.
-fn format_any_value(v: &AnyValue) -> String {
+pub fn format_any_value(v: &AnyValue) -> String {
     match v {
         AnyValue::Null => String::new(),
         AnyValue::Boolean(b) => b.to_string(),

@@ -8,12 +8,14 @@
 
 <table>
 <tr>
-<td align="center" width="50%"><strong>xlcat</strong> — view</td>
-<td align="center" width="50%"><strong>xlset</strong> — edit</td>
+<td align="center" width="33%"><strong>xlcat</strong> — view</td>
+<td align="center" width="33%"><strong>xlset</strong> — edit</td>
+<td align="center" width="33%"><strong>xlfilter</strong> — query</td>
 </tr>
 <tr>
 <td><img src="demo/xlcat.gif" alt="xlcat demo" /></td>
 <td><img src="demo/xlset.gif" alt="xlset demo" /></td>
+<td><img src="demo/xlfilter.gif" alt="xlfilter demo" /></td>
 </tr>
 </table>
 
@@ -21,10 +23,11 @@
 
 ***
 
-Two binaries, no runtime dependencies:
+Three binaries, no runtime dependencies:
 
 - **`xlcat`** — view xlsx/xls files as markdown tables or CSV
 - **`xlset`** — modify cells in existing xlsx files, preserving formatting
+- **`xlfilter`** — filter, sort, and query rows from spreadsheets
 
 ## Installation
 
@@ -36,12 +39,14 @@ Download from [Releases](https://github.com/LouLouLibs/xl-cli-tools/releases):
 # Apple Silicon
 curl -L https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/xlcat-aarch64-apple-darwin -o ~/.local/bin/xlcat
 curl -L https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/xlset-aarch64-apple-darwin -o ~/.local/bin/xlset
-chmod +x ~/.local/bin/xlcat ~/.local/bin/xlset
+curl -L https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/xlfilter-aarch64-apple-darwin -o ~/.local/bin/xlfilter
+chmod +x ~/.local/bin/xlcat ~/.local/bin/xlset ~/.local/bin/xlfilter
 
 # Intel Mac
 curl -L https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/xlcat-x86_64-apple-darwin -o ~/.local/bin/xlcat
 curl -L https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/xlset-x86_64-apple-darwin -o ~/.local/bin/xlset
-chmod +x ~/.local/bin/xlcat ~/.local/bin/xlset
+curl -L https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/xlfilter-x86_64-apple-darwin -o ~/.local/bin/xlfilter
+chmod +x ~/.local/bin/xlcat ~/.local/bin/xlset ~/.local/bin/xlfilter
 ```
 
 ### From source
@@ -115,6 +120,59 @@ xlcat report.xlsx --csv --head 100 > subset.csv
 - **Multiple sheets:** lists schemas, pick one with `--sheet`
 - **Large file (>1MB):** schema + first 25 rows (override with `--max-size 5M`)
 
+## xlfilter — Query and Filter
+
+```bash
+# Filter rows by value
+xlfilter data.xlsx --where "State=CA"
+
+# Numeric comparisons
+xlfilter data.xlsx --where "Amount>1000"
+
+# Multiple filters (AND)
+xlfilter data.xlsx --where "State=CA" --where "Amount>1000"
+
+# Select columns (by name or letter)
+xlfilter data.xlsx --cols State,Amount,Year
+xlfilter data.xlsx --cols A,C,D
+
+# Sort results
+xlfilter data.xlsx --sort "Amount:desc"
+
+# Limit output
+xlfilter data.xlsx --sort "Amount:desc" --limit 10
+
+# Contains filter (case-insensitive)
+xlfilter data.xlsx --where "Name~john"
+
+# Head/tail (applied before filtering)
+xlfilter data.xlsx --head 100 --where "Status=Active"
+
+# Skip metadata rows above the real header
+xlfilter data.xlsx --skip 2
+
+# CSV output for piping
+xlfilter data.xlsx --where "Status!=Draft" --csv | other-tool
+
+# Target a specific sheet
+xlfilter data.xlsx --sheet Revenue --where "Amount>5000"
+```
+
+### Filter operators
+
+| Operator | Meaning | Example |
+|----------|---------|---------|
+| `=` | Equals | `State=CA` |
+| `!=` | Not equals | `Status!=Draft` |
+| `>` | Greater than | `Amount>1000` |
+| `<` | Less than | `Year<2024` |
+| `>=` | Greater or equal | `Score>=90` |
+| `<=` | Less or equal | `Price<=50` |
+| `~` | Contains (case-insensitive) | `Name~john` |
+| `!~` | Not contains | `Name!~test` |
+
+Numeric columns compare numerically; string columns compare lexicographically. Row count is printed to stderr.
+
 ## xlset — Edit Excel Cells
 
 ```bash
@@ -171,11 +229,11 @@ Claude Code skills (`/xlcat` and `/xlset`) are available in [claude-skills](http
 
 ## Exit codes
 
-| Code | xlcat | xlset |
-|------|-------|-------|
-| 0 | Success | Success |
-| 1 | Runtime error | Runtime error |
-| 2 | Invalid arguments | Invalid arguments |
+| Code | Meaning |
+|------|---------|
+| 0 | Success |
+| 1 | Runtime error |
+| 2 | Invalid arguments |
 
 ## License
 

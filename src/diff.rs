@@ -325,6 +325,7 @@ fn values_equal_with_tolerance(
 }
 
 /// Compare non-key columns of two keyed rows and return cell-level changes.
+#[allow(clippy::too_many_arguments)]
 fn compare_rows(
     df_a: &DataFrame,
     df_b: &DataFrame,

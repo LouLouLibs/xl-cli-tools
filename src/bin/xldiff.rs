@@ -122,10 +122,10 @@ fn resolve_sheet(
                 return Ok(sheet.name.clone());
             }
             // 0-based index
-            if let Ok(idx) = s.parse::<usize>() {
-                if let Some(sheet) = info.sheets.get(idx) {
-                    return Ok(sheet.name.clone());
-                }
+            if let Ok(idx) = s.parse::<usize>()
+                && let Some(sheet) = info.sheets.get(idx)
+            {
+                return Ok(sheet.name.clone());
             }
             let names: Vec<_> = info.sheets.iter().map(|si| si.name.as_str()).collect();
             bail!(

@@ -693,4 +693,73 @@ mod tests {
         assert_eq!(m.changes[0].old_value, "140");
         assert_eq!(m.changes[0].new_value, "142");
     }
+
+    // ---- Tolerance tests ----
+
+    #[test]
+    fn test_keyed_tolerance_within() {
+        let df_a = df! {
+            "id" => &[1],
+            "price" => &[100.001_f64],
+        }
+        .unwrap();
+        let df_b = df! {
+            "id" => &[1],
+            "price" => &[100.002_f64],
+        }
+        .unwrap();
+        let opts = DiffOptions {
+            key_columns: vec!["id".into()],
+            tolerance: Some(0.01),
+        };
+
+        let result = diff_keyed(&df_a, &df_b, &opts, test_source_a(), test_source_b()).unwrap();
+
+        assert!(!result.has_differences());
+    }
+
+    #[test]
+    fn test_keyed_tolerance_exceeded() {
+        let df_a = df! {
+            "id" => &[1],
+            "price" => &[100.0_f64],
+        }
+        .unwrap();
+        let df_b = df! {
+            "id" => &[1],
+            "price" => &[100.05_f64],
+        }
+        .unwrap();
+        let opts = DiffOptions {
+            key_columns: vec!["id".into()],
+            tolerance: Some(0.01),
+        };
+
+        let result = diff_keyed(&df_a, &df_b, &opts, test_source_a(), test_source_b()).unwrap();
+
+        assert_eq!(result.modified.len(), 1);
+        assert_eq!(result.modified[0].changes[0].column, "price");
+    }
+
+    #[test]
+    fn test_keyed_nan_handling() {
+        let df_a = df! {
+            "id" => &[1],
+            "value" => &[f64::NAN],
+        }
+        .unwrap();
+        let df_b = df! {
+            "id" => &[1],
+            "value" => &[f64::NAN],
+        }
+        .unwrap();
+        let opts = DiffOptions {
+            key_columns: vec!["id".into()],
+            tolerance: Some(0.01),
+        };
+
+        let result = diff_keyed(&df_a, &df_b, &opts, test_source_a(), test_source_b()).unwrap();
+
+        assert!(!result.has_differences(), "NaN vs NaN should be treated as equal");
+    }
 }

@@ -21,6 +21,10 @@ path = "src/bin/xlcat.rs"
 name = "xlset"
 path = "src/bin/xlset.rs"
 
+[[bin]]
+name = "xlfilter"
+path = "src/bin/xlfilter.rs"
+
 [dependencies]
 calamine = "0.26"
 polars = { version = "0.46", features = ["dtype-date", "dtype-datetime", "dtype-duration", "csv"] }

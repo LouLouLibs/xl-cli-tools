@@ -32,9 +32,9 @@ jobs:
       - name: Package binaries
         run: |
           mkdir -p dist
-          cp target/${{ matrix.target }}/release/xlcat dist/xlcat-${{ matrix.suffix }}
-          cp target/${{ matrix.target }}/release/xlset dist/xlset-${{ matrix.suffix }}
-          cp target/${{ matrix.target }}/release/xlfilter dist/xlfilter-${{ matrix.suffix }}
+          for bin in xlcat xlset xlfilter xldiff; do
+            cp target/${{ matrix.target }}/release/$bin dist/${bin}-${{ matrix.suffix }}
+          done
 
       - uses: actions/upload-artifact@v4
         with:
@@ -55,23 +55,17 @@ jobs:
         run: |
           mkdir -p release
 
-          # ARM Mac
-          cp artifacts/binaries-aarch64-apple-darwin/xlcat-aarch64-apple-darwin release/
-          cp artifacts/binaries-aarch64-apple-darwin/xlset-aarch64-apple-darwin release/
-          cp artifacts/binaries-aarch64-apple-darwin/xlfilter-aarch64-apple-darwin release/
-
-          # x86 Mac
-          cp artifacts/binaries-x86_64-apple-darwin/xlcat-x86_64-apple-darwin release/
-          cp artifacts/binaries-x86_64-apple-darwin/xlset-x86_64-apple-darwin release/
-          cp artifacts/binaries-x86_64-apple-darwin/xlfilter-x86_64-apple-darwin release/
+          for arch in aarch64-apple-darwin x86_64-apple-darwin; do
+            for bin in xlcat xlset xlfilter xldiff; do
+              cp artifacts/binaries-${arch}/${bin}-${arch} release/
+            done
+          done
 
           # Demo GIFs
-          cp demo/xlcat.gif release/
-          cp demo/xlset.gif release/
-          cp demo/xlfilter.gif release/
+          cp demo/*.gif release/
 
           # Make binaries executable
-          chmod +x release/xlcat-* release/xlset-* release/xlfilter-*
+          chmod +x release/xl*-*-apple-darwin
 
       - name: Create GitHub Release
         env:

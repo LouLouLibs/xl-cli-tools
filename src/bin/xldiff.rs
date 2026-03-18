@@ -37,10 +37,6 @@ struct Args {
     #[arg(long, default_value = "0")]
     skip: String,
 
-    /// Treat first row as data, not headers (declared for future use)
-    #[arg(long)]
-    no_header: bool,
-
     /// Numeric tolerance for float comparisons
     #[arg(long)]
     tolerance: Option<f64>,
@@ -206,17 +202,17 @@ fn format_text(result: &DiffResult, color: bool) -> String {
 
     // Modified rows
     for m in &result.modified {
-        // Build key display
+        // Build key display: Key: "value"  Key2: "value2"
         let key_display: Vec<String> = result
             .key_columns
             .iter()
             .zip(m.key.iter())
-            .map(|(col, val)| format!("{}={}", col, val))
+            .map(|(col, val)| format!("{}: \"{}\"", col, val))
             .collect();
         out.push_str(&format!(
-            "{}~ [{}]{}",
+            "{}~ {}{}",
             yellow,
-            key_display.join(", "),
+            key_display.join("  "),
             reset,
         ));
         out.push('\n');
@@ -267,8 +263,13 @@ fn format_markdown(result: &DiffResult) -> String {
     if !result.modified.is_empty() {
         out.push_str(&format!("## Modified ({})\n\n", result.modified.len()));
 
+        let key_label = if result.key_columns.len() == 1 {
+            format!("Key ({})", result.key_columns[0])
+        } else {
+            format!("Key ({})", result.key_columns.join(", "))
+        };
         let headers = vec![
-            "Key".to_string(),
+            key_label,
             "Column".to_string(),
             "Old".to_string(),
             "New".to_string(),
@@ -276,13 +277,7 @@ fn format_markdown(result: &DiffResult) -> String {
         let mut rows: Vec<Vec<String>> = Vec::new();
 
         for m in &result.modified {
-            let key_display: String = result
-                .key_columns
-                .iter()
-                .zip(m.key.iter())
-                .map(|(col, val)| format!("{}={}", col, val))
-                .collect::<Vec<_>>()
-                .join(", ");
+            let key_display = m.key.join(", ");
 
             for (i, change) in m.changes.iter().enumerate() {
                 let key_cell = if i == 0 {
@@ -773,7 +768,7 @@ mod tests {
         assert!(text.contains("Modified: 1"));
         assert!(text.contains("- id: \"1\"  name: \"Alice\""));
         assert!(text.contains("+ id: \"3\"  name: \"Charlie\""));
-        assert!(text.contains("~ [id=2]"));
+        assert!(text.contains("~ id: \"2\""));
         assert!(text.contains("name: \"Bob\" \u{2192} \"Robert\""));
     }
 

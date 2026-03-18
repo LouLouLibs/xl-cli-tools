@@ -107,3 +107,61 @@ pub fn create_empty_sheet(path: &Path) {
     wb.add_worksheet().set_name("Blank").unwrap();
     wb.save(path).unwrap();
 }
+
+/// Create a test file with diverse data for filter testing.
+/// Sheet "Data" with 6 rows: State, City, Amount, Year, Status
+pub fn create_filterable(path: &Path) {
+    let mut workbook = Workbook::new();
+    let sheet = workbook.add_worksheet().set_name("Data").unwrap();
+
+    // Headers
+    sheet.write_string(0, 0, "State").unwrap();
+    sheet.write_string(0, 1, "City").unwrap();
+    sheet.write_string(0, 2, "Amount").unwrap();
+    sheet.write_string(0, 3, "Year").unwrap();
+    sheet.write_string(0, 4, "Status").unwrap();
+
+    // Row 1: CA, Los Angeles, 1500, 2023, Active
+    sheet.write_string(1, 0, "CA").unwrap();
+    sheet.write_string(1, 1, "Los Angeles").unwrap();
+    sheet.write_number(1, 2, 1500.0).unwrap();
+    sheet.write_number(1, 3, 2023.0).unwrap();
+    sheet.write_string(1, 4, "Active").unwrap();
+
+    // Row 2: NY, New York, 2000, 2023, Active
+    sheet.write_string(2, 0, "NY").unwrap();
+    sheet.write_string(2, 1, "New York").unwrap();
+    sheet.write_number(2, 2, 2000.0).unwrap();
+    sheet.write_number(2, 3, 2023.0).unwrap();
+    sheet.write_string(2, 4, "Active").unwrap();
+
+    // Row 3: CA, San Francisco, 800, 2024, Draft
+    sheet.write_string(3, 0, "CA").unwrap();
+    sheet.write_string(3, 1, "San Francisco").unwrap();
+    sheet.write_number(3, 2, 800.0).unwrap();
+    sheet.write_number(3, 3, 2024.0).unwrap();
+    sheet.write_string(3, 4, "Draft").unwrap();
+
+    // Row 4: TX, Houston, 1200, 2024, Active
+    sheet.write_string(4, 0, "TX").unwrap();
+    sheet.write_string(4, 1, "Houston").unwrap();
+    sheet.write_number(4, 2, 1200.0).unwrap();
+    sheet.write_number(4, 3, 2024.0).unwrap();
+    sheet.write_string(4, 4, "Active").unwrap();
+
+    // Row 5: NY, Albany, 500, 2023, Draft
+    sheet.write_string(5, 0, "NY").unwrap();
+    sheet.write_string(5, 1, "Albany").unwrap();
+    sheet.write_number(5, 2, 500.0).unwrap();
+    sheet.write_number(5, 3, 2023.0).unwrap();
+    sheet.write_string(5, 4, "Draft").unwrap();
+
+    // Row 6: FL, Miami, 3000, 2024, Active
+    sheet.write_string(6, 0, "FL").unwrap();
+    sheet.write_string(6, 1, "Miami").unwrap();
+    sheet.write_number(6, 2, 3000.0).unwrap();
+    sheet.write_number(6, 3, 2024.0).unwrap();
+    sheet.write_string(6, 4, "Active").unwrap();
+
+    workbook.save(path).unwrap();
+}

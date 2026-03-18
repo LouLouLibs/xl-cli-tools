@@ -505,6 +505,26 @@ pub fn diff_keyed(
     })
 }
 
+// ---------------------------------------------------------------------------
+// Entry point
+// ---------------------------------------------------------------------------
+
+/// Compare two DataFrames, dispatching to positional or key-based diff
+/// depending on whether key columns are specified.
+pub fn diff_sheets(
+    df_a: &DataFrame,
+    df_b: &DataFrame,
+    opts: &DiffOptions,
+    source_a: SheetSource,
+    source_b: SheetSource,
+) -> Result<DiffResult> {
+    if opts.key_columns.is_empty() {
+        diff_positional(df_a, df_b, opts, source_a, source_b)
+    } else {
+        diff_keyed(df_a, df_b, opts, source_a, source_b)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -761,5 +781,49 @@ mod tests {
         let result = diff_keyed(&df_a, &df_b, &opts, test_source_a(), test_source_b()).unwrap();
 
         assert!(!result.has_differences(), "NaN vs NaN should be treated as equal");
+    }
+
+    // ---- diff_sheets entry point tests ----
+
+    #[test]
+    fn test_diff_sheets_positional() {
+        let df_a = df! {
+            "name" => &["Alice", "Bob"],
+        }
+        .unwrap();
+        let df_b = df! {
+            "name" => &["Alice", "Charlie"],
+        }
+        .unwrap();
+        let opts = DiffOptions::default(); // No key columns → positional.
+
+        let result = diff_sheets(&df_a, &df_b, &opts, test_source_a(), test_source_b()).unwrap();
+
+        assert!(result.key_columns.is_empty());
+        assert_eq!(result.removed.len(), 1);
+        assert_eq!(result.added.len(), 1);
+    }
+
+    #[test]
+    fn test_diff_sheets_keyed() {
+        let df_a = df! {
+            "id" => &[1, 2],
+            "score" => &[100, 200],
+        }
+        .unwrap();
+        let df_b = df! {
+            "id" => &[1, 2],
+            "score" => &[100, 250],
+        }
+        .unwrap();
+        let opts = DiffOptions {
+            key_columns: vec!["id".into()],
+            tolerance: None,
+        };
+
+        let result = diff_sheets(&df_a, &df_b, &opts, test_source_a(), test_source_b()).unwrap();
+
+        assert_eq!(result.key_columns, vec!["id"]);
+        assert_eq!(result.modified.len(), 1);
     }
 }

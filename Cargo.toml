@@ -31,7 +31,7 @@ path = "src/bin/xldiff.rs"
 
 [dependencies]
 calamine = "0.26"
-polars = { version = "0.46", features = ["dtype-date", "dtype-datetime", "dtype-duration", "csv"] }
+polars = { version = "0.46", default-features = false, features = ["dtype-datetime", "csv"] }
 clap = { version = "4", features = ["derive"] }
 anyhow = "1"
 umya-spreadsheet = "2"

@@ -95,4 +95,51 @@ fn main() {
         wb.save(dir.join("budget.xlsx")).unwrap();
         println!("Created demo/budget.xlsx");
     }
+
+    // --- old.xlsx & new.xlsx: diff demo pair ---
+    {
+        let mut wb = Workbook::new();
+        let ws = wb.add_worksheet();
+        ws.set_name("Sheet1").unwrap();
+        ws.write_string(0, 0, "ID").unwrap();
+        ws.write_string(0, 1, "Name").unwrap();
+        ws.write_string(0, 2, "Department").unwrap();
+        ws.write_string(0, 3, "Salary").unwrap();
+        for (i, (id, name, dept, salary)) in [
+            (1, "Alice",   "Engineering", 95000.0),
+            (2, "Bob",     "Marketing",   72000.0),
+            (3, "Charlie", "Engineering", 88000.0),
+            (4, "Dana",    "Sales",       65000.0),
+        ].iter().enumerate() {
+            let row = (i + 1) as u32;
+            ws.write_number(row, 0, *id as f64).unwrap();
+            ws.write_string(row, 1, *name).unwrap();
+            ws.write_string(row, 2, *dept).unwrap();
+            ws.write_number(row, 3, *salary).unwrap();
+        }
+        wb.save(dir.join("old.xlsx")).unwrap();
+        println!("Created demo/old.xlsx");
+
+        let mut wb = Workbook::new();
+        let ws = wb.add_worksheet();
+        ws.set_name("Sheet1").unwrap();
+        ws.write_string(0, 0, "ID").unwrap();
+        ws.write_string(0, 1, "Name").unwrap();
+        ws.write_string(0, 2, "Department").unwrap();
+        ws.write_string(0, 3, "Salary").unwrap();
+        for (i, (id, name, dept, salary)) in [
+            (1, "Alice", "Engineering", 98000.0),
+            (2, "Bob",   "Design",      75000.0),
+            (4, "Dana",  "Sales",       65000.0),
+            (5, "Eve",   "Marketing",   70000.0),
+        ].iter().enumerate() {
+            let row = (i + 1) as u32;
+            ws.write_number(row, 0, *id as f64).unwrap();
+            ws.write_string(row, 1, *name).unwrap();
+            ws.write_string(row, 2, *dept).unwrap();
+            ws.write_number(row, 3, *salary).unwrap();
+        }
+        wb.save(dir.join("new.xlsx")).unwrap();
+        println!("Created demo/new.xlsx");
+    }
 }

@@ -188,3 +188,115 @@ pub fn create_filterable(path: &Path) {
 
     workbook.save(path).unwrap();
 }
+
+/// Create a pair of files for positional diff testing.
+/// File A: Name/Score — Alice/90, Bob/80, Charlie/70
+/// File B: Name/Score — Alice/90, Charlie/70, Dana/85
+/// Expected: Bob removed, Dana added
+pub fn create_diff_pair(path_a: &Path, path_b: &Path) {
+    // File A
+    {
+        let mut wb = Workbook::new();
+        let ws = wb.add_worksheet().set_name("Data").unwrap();
+        ws.write_string(0, 0, "Name").unwrap();
+        ws.write_string(0, 1, "Score").unwrap();
+        ws.write_string(1, 0, "Alice").unwrap();
+        ws.write_number(1, 1, 90.0).unwrap();
+        ws.write_string(2, 0, "Bob").unwrap();
+        ws.write_number(2, 1, 80.0).unwrap();
+        ws.write_string(3, 0, "Charlie").unwrap();
+        ws.write_number(3, 1, 70.0).unwrap();
+        wb.save(path_a).unwrap();
+    }
+
+    // File B
+    {
+        let mut wb = Workbook::new();
+        let ws = wb.add_worksheet().set_name("Data").unwrap();
+        ws.write_string(0, 0, "Name").unwrap();
+        ws.write_string(0, 1, "Score").unwrap();
+        ws.write_string(1, 0, "Alice").unwrap();
+        ws.write_number(1, 1, 90.0).unwrap();
+        ws.write_string(2, 0, "Charlie").unwrap();
+        ws.write_number(2, 1, 70.0).unwrap();
+        ws.write_string(3, 0, "Dana").unwrap();
+        ws.write_number(3, 1, 85.0).unwrap();
+        wb.save(path_b).unwrap();
+    }
+}
+
+/// Create a pair of files for key-based diff testing.
+/// File A: ID/Name/Score — "1"/Alice/90, "2"/Bob/80, "3"/Charlie/70
+/// File B: ID/Name/Score — "1"/Alice/95, "2"/Bob/80, "4"/Dana/85
+/// Expected: ID=1 modified (Score 90→95), ID=3 removed, ID=4 added
+pub fn create_diff_pair_with_keys(path_a: &Path, path_b: &Path) {
+    // File A
+    {
+        let mut wb = Workbook::new();
+        let ws = wb.add_worksheet().set_name("Data").unwrap();
+        ws.write_string(0, 0, "ID").unwrap();
+        ws.write_string(0, 1, "Name").unwrap();
+        ws.write_string(0, 2, "Score").unwrap();
+        ws.write_string(1, 0, "1").unwrap();
+        ws.write_string(1, 1, "Alice").unwrap();
+        ws.write_number(1, 2, 90.0).unwrap();
+        ws.write_string(2, 0, "2").unwrap();
+        ws.write_string(2, 1, "Bob").unwrap();
+        ws.write_number(2, 2, 80.0).unwrap();
+        ws.write_string(3, 0, "3").unwrap();
+        ws.write_string(3, 1, "Charlie").unwrap();
+        ws.write_number(3, 2, 70.0).unwrap();
+        wb.save(path_a).unwrap();
+    }
+
+    // File B
+    {
+        let mut wb = Workbook::new();
+        let ws = wb.add_worksheet().set_name("Data").unwrap();
+        ws.write_string(0, 0, "ID").unwrap();
+        ws.write_string(0, 1, "Name").unwrap();
+        ws.write_string(0, 2, "Score").unwrap();
+        ws.write_string(1, 0, "1").unwrap();
+        ws.write_string(1, 1, "Alice").unwrap();
+        ws.write_number(1, 2, 95.0).unwrap();
+        ws.write_string(2, 0, "2").unwrap();
+        ws.write_string(2, 1, "Bob").unwrap();
+        ws.write_number(2, 2, 80.0).unwrap();
+        ws.write_string(3, 0, "4").unwrap();
+        ws.write_string(3, 1, "Dana").unwrap();
+        ws.write_number(3, 2, 85.0).unwrap();
+        wb.save(path_b).unwrap();
+    }
+}
+
+/// Create a pair of files for tolerance testing.
+/// File A: ID/Price — "1"/100.001, "2"/200.5
+/// File B: ID/Price — "1"/100.002, "2"/200.6
+/// Expected with tolerance 0.01: only ID=2 modified (diff=0.1 > 0.01)
+pub fn create_diff_pair_with_floats(path_a: &Path, path_b: &Path) {
+    // File A
+    {
+        let mut wb = Workbook::new();
+        let ws = wb.add_worksheet().set_name("Data").unwrap();
+        ws.write_string(0, 0, "ID").unwrap();
+        ws.write_string(0, 1, "Price").unwrap();
+        ws.write_string(1, 0, "1").unwrap();
+        ws.write_number(1, 1, 100.001).unwrap();
+        ws.write_string(2, 0, "2").unwrap();
+        ws.write_number(2, 1, 200.5).unwrap();
+        wb.save(path_a).unwrap();
+    }
+
+    // File B
+    {
+        let mut wb = Workbook::new();
+        let ws = wb.add_worksheet().set_name("Data").unwrap();
+        ws.write_string(0, 0, "ID").unwrap();
+        ws.write_string(0, 1, "Price").unwrap();
+        ws.write_string(1, 0, "1").unwrap();
+        ws.write_number(1, 1, 100.002).unwrap();
+        ws.write_string(2, 0, "2").unwrap();
+        ws.write_number(2, 1, 200.6).unwrap();
+        wb.save(path_b).unwrap();
+    }
+}

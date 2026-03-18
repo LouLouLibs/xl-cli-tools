@@ -15,9 +15,9 @@ jobs:
           - target: aarch64-apple-darwin
             os: macos-latest
             suffix: aarch64-apple-darwin
-          - target: x86_64-apple-darwin
-            os: macos-latest
-            suffix: x86_64-apple-darwin
+          - target: x86_64-unknown-linux-gnu
+            os: ubuntu-latest
+            suffix: x86_64-linux
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v4
@@ -55,7 +55,7 @@ jobs:
         run: |
           mkdir -p release
 
-          for arch in aarch64-apple-darwin x86_64-apple-darwin; do
+          for arch in aarch64-apple-darwin x86_64-linux; do
             for bin in xlcat xlset xlfilter xldiff; do
               cp artifacts/binaries-${arch}/${bin}-${arch} release/
             done
@@ -65,7 +65,7 @@ jobs:
           cp demo/*.gif release/
 
           # Make binaries executable
-          chmod +x release/xl*-*-apple-darwin
+          chmod +x release/xl*-*
 
       - name: Create GitHub Release
         env:

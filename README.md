@@ -56,14 +56,19 @@ xldiff old.xlsx new.xlsx --key ID
 Download from [Releases](https://github.com/LouLouLibs/xl-cli-tools/releases):
 
 ```bash
-# Apple Silicon
+# Apple Silicon (macOS)
 for tool in xlcat xlset xlfilter xldiff; do
   curl -L "https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/${tool}-aarch64-apple-darwin" \
     -o ~/.local/bin/$tool
 done
 chmod +x ~/.local/bin/xl{cat,set,filter,diff}
 
-# Intel Mac — replace aarch64 with x86_64
+# Linux (x86_64)
+for tool in xlcat xlset xlfilter xldiff; do
+  curl -L "https://github.com/LouLouLibs/xl-cli-tools/releases/latest/download/${tool}-x86_64-linux" \
+    -o ~/.local/bin/$tool
+done
+chmod +x ~/.local/bin/xl{cat,set,filter,diff}
 ```
 
 ### From source

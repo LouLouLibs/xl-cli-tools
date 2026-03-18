@@ -1,3 +1,6 @@
+use anyhow::Result;
+use polars::prelude::*;
+
 #[derive(Debug, Clone, PartialEq)]
 pub enum FilterOp {
     Eq,
@@ -137,9 +140,226 @@ pub fn resolve_columns(specs: &[String], df_columns: &[String]) -> Result<Vec<St
     specs.iter().map(|s| resolve_column(s, df_columns)).collect()
 }
 
+/// Check if a polars DataType is numeric.
+fn is_numeric_dtype(dtype: &DataType) -> bool {
+    matches!(
+        dtype,
+        DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Float32
+            | DataType::Float64
+    )
+}
+
+/// Build a boolean mask for a single filter expression against a DataFrame.
+fn build_filter_mask(df: &DataFrame, expr: &FilterExpr) -> Result<BooleanChunked> {
+    let col = df.column(&expr.column).map_err(|e| anyhow::anyhow!("{}", e))?;
+    let series = col.as_materialized_series();
+    let dtype = series.dtype();
+
+    match &expr.op {
+        FilterOp::Eq => {
+            if is_numeric_dtype(dtype) {
+                if let Ok(n) = expr.value.parse::<f64>() {
+                    let s = series.cast(&DataType::Float64)?;
+                    return Ok(s.f64()?.equal(n));
+                }
+            }
+            let s = series.cast(&DataType::String)?;
+            Ok(s.str()?.equal(expr.value.as_str()))
+        }
+        FilterOp::NotEq => {
+            if is_numeric_dtype(dtype) {
+                if let Ok(n) = expr.value.parse::<f64>() {
+                    let s = series.cast(&DataType::Float64)?;
+                    return Ok(s.f64()?.not_equal(n));
+                }
+            }
+            let s = series.cast(&DataType::String)?;
+            Ok(s.str()?.not_equal(expr.value.as_str()))
+        }
+        FilterOp::Gt => {
+            let n = parse_numeric_value(&expr.value, ">")?;
+            let s = series.cast(&DataType::Float64)?;
+            Ok(s.f64()?.gt(n))
+        }
+        FilterOp::Lt => {
+            let n = parse_numeric_value(&expr.value, "<")?;
+            let s = series.cast(&DataType::Float64)?;
+            Ok(s.f64()?.lt(n))
+        }
+        FilterOp::Gte => {
+            let n = parse_numeric_value(&expr.value, ">=")?;
+            let s = series.cast(&DataType::Float64)?;
+            Ok(s.f64()?.gt_eq(n))
+        }
+        FilterOp::Lte => {
+            let n = parse_numeric_value(&expr.value, "<=")?;
+            let s = series.cast(&DataType::Float64)?;
+            Ok(s.f64()?.lt_eq(n))
+        }
+        FilterOp::Contains => {
+            let s = series.cast(&DataType::String)?;
+            let ca = s.str()?;
+            let pat = expr.value.to_lowercase();
+            let mask: BooleanChunked = ca.into_iter()
+                .map(|opt_s| opt_s.map(|s| s.to_lowercase().contains(&pat)).unwrap_or(false))
+                .collect();
+            Ok(mask)
+        }
+        FilterOp::NotContains => {
+            let s = series.cast(&DataType::String)?;
+            let ca = s.str()?;
+            let pat = expr.value.to_lowercase();
+            let mask: BooleanChunked = ca.into_iter()
+                .map(|opt_s| opt_s.map(|s| !s.to_lowercase().contains(&pat)).unwrap_or(true))
+                .collect();
+            Ok(mask)
+        }
+    }
+}
+
+fn parse_numeric_value(value: &str, op: &str) -> Result<f64> {
+    value
+        .parse::<f64>()
+        .map_err(|_| anyhow::anyhow!("'{}' requires numeric value, got '{}'", op, value))
+}
+
+/// Apply a list of filter expressions to a DataFrame (AND logic).
+/// An empty list returns the DataFrame unchanged.
+pub fn apply_filters(df: &DataFrame, exprs: &[FilterExpr]) -> Result<DataFrame> {
+    let mut result = df.clone();
+    for expr in exprs {
+        let mask = build_filter_mask(&result, expr)?;
+        result = result.filter(&mask)?;
+    }
+    Ok(result)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn make_test_df() -> DataFrame {
+        DataFrame::new(vec![
+            Column::new("State".into(), &["CA", "NY", "CA", "TX", "NY"]),
+            Column::new("City".into(), &["LA", "NYC", "SF", "Houston", "Albany"]),
+            Column::new("Amount".into(), &[1500i64, 2000, 800, 1200, 500]),
+            Column::new("Year".into(), &[2023i64, 2023, 2024, 2024, 2023]),
+            Column::new("Status".into(), &["Active", "Active", "Draft", "Active", "Draft"]),
+        ])
+        .unwrap()
+    }
+
+    #[test]
+    fn filter_eq_string() {
+        let df = make_test_df();
+        let expr = parse_filter_expr("State=CA").unwrap();
+        let result = apply_filters(&df, &[expr]).unwrap();
+        assert_eq!(result.height(), 2);
+    }
+
+    #[test]
+    fn filter_eq_numeric() {
+        let df = make_test_df();
+        let expr = parse_filter_expr("Amount=1500").unwrap();
+        let result = apply_filters(&df, &[expr]).unwrap();
+        assert_eq!(result.height(), 1);
+    }
+
+    #[test]
+    fn filter_not_eq() {
+        let df = make_test_df();
+        let expr = parse_filter_expr("Status!=Draft").unwrap();
+        let result = apply_filters(&df, &[expr]).unwrap();
+        assert_eq!(result.height(), 3);
+    }
+
+    #[test]
+    fn filter_gt() {
+        let df = make_test_df();
+        let expr = parse_filter_expr("Amount>1000").unwrap();
+        let result = apply_filters(&df, &[expr]).unwrap();
+        assert_eq!(result.height(), 3);
+    }
+
+    #[test]
+    fn filter_lt() {
+        let df = make_test_df();
+        let expr = parse_filter_expr("Amount<1000").unwrap();
+        let result = apply_filters(&df, &[expr]).unwrap();
+        assert_eq!(result.height(), 2);
+    }
+
+    #[test]
+    fn filter_gte() {
+        let df = make_test_df();
+        let expr = parse_filter_expr("Amount>=1500").unwrap();
+        let result = apply_filters(&df, &[expr]).unwrap();
+        assert_eq!(result.height(), 2);
+    }
+
+    #[test]
+    fn filter_lte() {
+        let df = make_test_df();
+        let expr = parse_filter_expr("Amount<=800").unwrap();
+        let result = apply_filters(&df, &[expr]).unwrap();
+        assert_eq!(result.height(), 2);
+    }
+
+    #[test]
+    fn filter_contains() {
+        let df = make_test_df();
+        let expr = parse_filter_expr("City~ou").unwrap();
+        let result = apply_filters(&df, &[expr]).unwrap();
+        assert_eq!(result.height(), 1);
+    }
+
+    #[test]
+    fn filter_contains_case_insensitive() {
+        let df = make_test_df();
+        let expr = parse_filter_expr("City~HOUSTON").unwrap();
+        let result = apply_filters(&df, &[expr]).unwrap();
+        assert_eq!(result.height(), 1);
+    }
+
+    #[test]
+    fn filter_not_contains() {
+        let df = make_test_df();
+        let expr = parse_filter_expr("Status!~raft").unwrap();
+        let result = apply_filters(&df, &[expr]).unwrap();
+        assert_eq!(result.height(), 3);
+    }
+
+    #[test]
+    fn filter_multiple_and() {
+        let df = make_test_df();
+        let e1 = parse_filter_expr("State=CA").unwrap();
+        let e2 = parse_filter_expr("Amount>1000").unwrap();
+        let result = apply_filters(&df, &[e1, e2]).unwrap();
+        assert_eq!(result.height(), 1);
+    }
+
+    #[test]
+    fn filter_no_matches_returns_empty() {
+        let df = make_test_df();
+        let expr = parse_filter_expr("State=ZZ").unwrap();
+        let result = apply_filters(&df, &[expr]).unwrap();
+        assert_eq!(result.height(), 0);
+    }
+
+    #[test]
+    fn filter_empty_exprs_returns_all() {
+        let df = make_test_df();
+        let result = apply_filters(&df, &[]).unwrap();
+        assert_eq!(result.height(), 5);
+    }
 
     #[test]
     fn parse_eq() {

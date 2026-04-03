@@ -1,5 +1,7 @@
 <div align="center">
 
+> **DEPRECATED** — Read-only tools (xlcat, xlfilter, xldiff) have moved to **[dt-cli-tools](https://github.com/LouLouLibs/dt-cli-tools)**, which supports CSV, TSV, Parquet, Arrow, JSON, NDJSON, and Excel. **xlset** remains here for Excel editing.
+
 <h1>xl-cli-tools</h1>
 <h3>View, edit, query, and diff Excel files from the command line</h3>
 
